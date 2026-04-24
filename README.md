@@ -1,70 +1,91 @@
-# Getting Started with Create React App
+#  AssignX – From Paper Assignments to Practical Impact
+> *Reimagining assignments as real-world learning experiences.*
+##  Problem Statement
+Traditional academic assignments are:
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+*  Paper-intensive
+*  Theory-heavy
+*  Low in practical skill development
 
-## Available Scripts
+###  Reality Check
 
-In the project directory, you can run:
+* 1 student ≈ **960 pages** in 4 years
+* India ≈ **40 million students**
+*  **38.4 billion pages used**
+*  **~4.6 million trees cut** 
 
-### `npm start`
+> The question is: Are these assignments creating skills or just paperwork?
+##  Our Solution – AssignX
+**AssignX** is a **skill-based assignment platform** that transforms how students learn.
+Instead of writing long theory:
+* Students **build real-world projects**
+* Submit **GitHub links**
+* Provide **visual proof + reflections**
+##  Learning Transformation
+| Traditional System | AssignX System     |
+| ------------------ | ------------------ |
+| Writing theory     | Building solutions |
+| Submitting files   | Submitting proof   |
+| Marks-based        | Skill-based        |
+| Temporary work     | Portfolio creation |
+##  Key Features
+*  Visual Proof-Based Submissions
+*  Skill-Oriented Task Design
+*  Reflection-Based Learning
+*  Structured Rubric Evaluation
+*  Eco-Score Tracking System
+*  Cloud-Based Platform
+##  Hackathon Journey (Tech Tarang 2026)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| Round       | Work Done                     |
+| ---------   | ----------------------------- |
+|Round 1      | Problem statement understanding and solution proposal(online)|
+|Round 2      | Prototype development phase(offline)         |
+|Round 3      | final Presentation round(offline)            |
+##  System Workflow
+1. Faculty assigns a **real-world task**
+2. Student performs the task
+3. Submits:
+   * GitHub link 
+   * Images / proof 
+   * Reflection 
+4. Faculty evaluates using **rubrics**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+##  Impact
+###  Environmental Impact
+* Reduces paper usage drastically
+* Saves **millions of trees**
 
-### `npm test`
+###  Educational Impact
+* Builds **real-world skills**
+* Creates **student portfolios**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+###  Institutional Impact
+* Better learning analytics
+* Measurable outcomes
+* Sustainable education branding
+##  Future Scope
+*  AI-based evaluation system
+*  Student performance analytics
+*  Nationwide implementation
+*  LMS integration
+##  Project Resources
+* 📄 PPT:[assignX](https://docs.google.com/presentation/d/1XvWwPah9ZJIOZrlkAGwzHAoWMDquyK8F/edit?usp=drive_link&ouid=111909922268219153899&rtpof=true&sd=true)
+* 📸 Screenshots: `assets/`
+* 🎥 Demo: *(Add your link here)*
+##  Team
 
-### `npm run build`
+* Anjali Arya
+* Muskan
+* Krish
+* Sneha Singh
+##  Conclusion
+AssignX is not just a project.
+It is a shift:
+* Paper →  Sustainable
+* Theory → Practical
+* Degree →  Skills
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+> **The future of education is skill-based. And it starts with AssignX.**
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
