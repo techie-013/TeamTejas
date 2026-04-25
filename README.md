@@ -71,7 +71,15 @@ Instead of writing long theory:
 *  LMS integration
 ##  Project Resources
 * 📄 PPT:[assignX](https://docs.google.com/presentation/d/1XvWwPah9ZJIOZrlkAGwzHAoWMDquyK8F/edit?usp=drive_link&ouid=111909922268219153899&rtpof=true&sd=true)
-* 📸 Screenshots: `assets/`
+## 📷 Screenshots
+
+![UI1](assets/UI1%20(1).png)
+
+![UI2](assets/UI2%20(2).png)
+
+![UI3](assets/UI3(3).png)
+
+![UI4](assets/UI4(4).png)
 * 🎥 Demo: *(Add your link here)*
 ##  Team
 
