@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc, increment, Timestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyAcu94iTuUGZxM0rxAYA54DcQr2KaFnPfc",
   authDomain: "assign-x-f8826.firebaseapp.com",
@@ -16,614 +16,488 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-const semesterCourses = {
-  theory: [
-    { code: "PCC-CSE205-T", name: "Microprocessor and Interfacing", credits: 3 },
-    { code: "PCC-CSE206-T", name: "Computer Networks", credits: 3 },
-    { code: "PCC-CSE207-T", name: "Database Management System", credits: 3 },
-    { code: "PCC-CSE208-T", name: "Analysis and Design of Algorithms", credits: 3 },
-    { code: "PCC-CSE209-T", name: "Software Engineering", credits: 3 },
-    { code: "PCC-CSE210-T", name: "Java Programming", credits: 3 }
-  ],
-  practical: [
-    { code: "PCC-CSE205-P", name: "Microprocessor and Interfacing Lab", credits: 1 },
-    { code: "PCC-CSE206-P", name: "Computer Networks Lab", credits: 1 },
-    { code: "PCC-CSE207-P", name: "Database Management System Lab", credits: 1 },
-    { code: "PCC-CSE210-P", name: "Java Programming Lab", credits: 2 }
-  ]
+// Student Data
+const studentsData = {
+  "sneha@assignx.com": { name: "Sneha Singh", rollNo: "240010130100", password: "240010130100", cgpa: 8.7,
+    minor1: { "MPI": 14, "CN": 15, "DBMS": 16, "ADA": 17, "SE": 18, "Java": 16 },
+    minor2: { "MPI": 16, "CN": 17, "DBMS": 18, "ADA": 19, "SE": 20, "Java": 18 }
+  },
+  "bhumikagoyal@assignx.com": { name: "Bhumika Goyal", rollNo: "240010130095", password: "240010130095", cgpa: 8.2,
+    minor1: { "MPI": 16, "CN": 15, "DBMS": 19, "ADA": 18, "SE": 17, "Java": 15 },
+    minor2: { "MPI": 18, "CN": 17, "DBMS": 21, "ADA": 20, "SE": 19, "Java": 17 }
+  },
+  "gauri@assignx.com": { name: "Gauri", rollNo: "240010130104", password: "240010130104", cgpa: 8.4,
+    minor1: { "MPI": 14, "CN": 13, "DBMS": 19, "ADA": 18, "SE": 19, "Java": 15 },
+    minor2: { "MPI": 16, "CN": 15, "DBMS": 21, "ADA": 20, "SE": 21, "Java": 17 }
+  }
+};
+
+// Courses
+const allCourses = [
+  { id: "MPI", name: "Microprocessor and Interfacing", code: "PCC-CSE205-T", faculty: "Prof. Sharma", facultyEmail: "faculty.mpi@assignx.com" },
+  { id: "CN", name: "Computer Networks", code: "PCC-CSE206-T", faculty: "Prof. Verma", facultyEmail: "faculty.cn@assignx.com" },
+  { id: "DBMS", name: "Database Management System", code: "PCC-CSE207-T", faculty: "Prof. Singh", facultyEmail: "faculty.dbms@assignx.com" },
+  { id: "ADA", name: "Analysis of Algorithms", code: "PCC-CSE208-T", faculty: "Prof. Gupta", facultyEmail: "faculty.ada@assignx.com" },
+  { id: "SE", name: "Software Engineering", code: "PCC-CSE209-T", faculty: "Prof. Patel", facultyEmail: "faculty.se@assignx.com" },
+  { id: "Java", name: "Java Programming", code: "PCC-CSE210-T", faculty: "Prof. Kumar", facultyEmail: "faculty.java@assignx.com" }
+];
+
+// Syllabus
+const syllabusData = {
+  "MPI": ["Unit 1: 8085 Architecture", "Unit 2: 8085 Programming", "Unit 3: 8086 Architecture", "Unit 4: Interfacing"],
+  "CN": ["Unit 1: OSI Model", "Unit 2: Data Link Layer", "Unit 3: Network Layer", "Unit 4: Transport Layer"],
+  "DBMS": ["Unit 1: DBMS Concepts", "Unit 2: ER Model", "Unit 3: SQL", "Unit 4: Normalization"],
+  "ADA": ["Unit 1: Algorithm Analysis", "Unit 2: Divide and Conquer", "Unit 3: Dynamic Programming", "Unit 4: Graph Algorithms"],
+  "SE": ["Unit 1: SDLC Models", "Unit 2: Requirements", "Unit 3: Design", "Unit 4: Testing"],
+  "Java": ["Unit 1: Java Fundamentals", "Unit 2: OOP Concepts", "Unit 3: Exception Handling", "Unit 4: GUI Programming"]
+};
+
+// Faculty Data
+const facultyData = {
+  "faculty.mpi@assignx.com": { name: "Prof. Sharma", password: "faculty123", subjectId: "MPI", subjectName: "Microprocessor and Interfacing", role: "faculty" },
+  "faculty.cn@assignx.com": { name: "Prof. Verma", password: "faculty123", subjectId: "CN", subjectName: "Computer Networks", role: "faculty" },
+  "faculty.dbms@assignx.com": { name: "Prof. Singh", password: "faculty123", subjectId: "DBMS", subjectName: "Database Management System", role: "faculty" },
+  "faculty.ada@assignx.com": { name: "Prof. Gupta", password: "faculty123", subjectId: "ADA", subjectName: "Analysis of Algorithms", role: "faculty" },
+  "faculty.se@assignx.com": { name: "Prof. Patel", password: "faculty123", subjectId: "SE", subjectName: "Software Engineering", role: "faculty" },
+  "faculty.java@assignx.com": { name: "Prof. Kumar", password: "faculty123", subjectId: "Java", subjectName: "Java Programming", role: "faculty" },
+  "coordinator@assignx.com": { name: "Dr. Coordinator", password: "coordinator123", subjectId: "all", subjectName: "All Subjects", role: "coordinator" }
 };
 
 function App() {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [userName, setUserName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('login');
+  const [userType, setUserType] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedView, setSelectedView] = useState(null);
+  const [liveAssignments, setLiveAssignments] = useState([]);
+  const [studentSubmissions, setStudentSubmissions] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const data = userDoc.data();
-        setUser(firebaseUser);
-        setUserRole(data?.role || 'student');
-        setUserName(data?.name || firebaseUser.email);
-      } else {
-        setUser(null);
-        setUserRole(null);
-        setCurrentView('login');
-      }
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+    if (userType === 'student' && selectedSubject) {
+      const q = query(collection(db, 'assignments'), where('subjectId', '==', selectedSubject), orderBy('createdAt', 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const assignments = [];
+        snapshot.forEach((doc) => assignments.push({ id: doc.id, ...doc.data() }));
+        setLiveAssignments(assignments);
+      });
+    }
+  }, [userType, selectedSubject]);
 
-  if (loading) return <LoadingScreen />;
-  if (currentView === 'login') return <LoginPage onLogin={(u, r, n) => { setUser(u); setUserRole(r); setUserName(n); setCurrentView(r === 'faculty' ? 'faculty' : 'student'); }} />;
-  if (currentView === 'signup') return <SignupPage onSignup={() => setCurrentView('login')} />;
-  if (currentView === 'student') return <StudentDashboard user={user} userName={userName} onLogout={() => { signOut(auth); setCurrentView('login'); }} />;
-  if (currentView === 'faculty') return <FacultyDashboard user={user} userName={userName} onLogout={() => { signOut(auth); setCurrentView('login'); }} />;
+  useEffect(() => {
+    if (userType === 'student' && user) {
+      const q = query(collection(db, 'submissions'), where('studentId', '==', user.email));
+      return onSnapshot(q, (snapshot) => {
+        const submissions = [];
+        snapshot.forEach((doc) => submissions.push({ id: doc.id, ...doc.data() }));
+        setStudentSubmissions(submissions);
+      });
+    }
+  }, [userType, user]);
+
+  const handleStudentLogin = (email, password) => {
+    setLoading(true);
+    const student = studentsData[email.toLowerCase()];
+    if (student && student.password === password) {
+      setUser({ email, type: 'student' });
+      setUserType('student');
+      setUserData(student);
+    } else {
+      setError('Invalid student credentials');
+    }
+    setLoading(false);
+  };
+
+  const handleFacultyLogin = (email, password) => {
+    setLoading(true);
+    const faculty = facultyData[email.toLowerCase()];
+    if (faculty && faculty.password === password) {
+      setUser({ email, type: faculty.role });
+      setUserType(faculty.role);
+      setUserData(faculty);
+      if (faculty.role !== 'coordinator') setSelectedSubject(faculty.subjectId);
+    } else {
+      setError('Invalid faculty credentials');
+    }
+    setLoading(false);
+  };
+
+  const createAssignment = async (title, description, dueDate, maxMarks, subjectId, subjectName) => {
+    try {
+      await addDoc(collection(db, 'assignments'), {
+        title, description, dueDate: Timestamp.fromDate(new Date(dueDate)), maxMarks,
+        subjectId, subjectName, createdBy: user.email, facultyName: userData.name,
+        createdAt: Timestamp.now(), isActive: true
+      });
+      alert('Assignment created successfully!');
+      return true;
+    } catch (error) {
+      alert('Error: ' + error.message);
+      return false;
+    }
+  };
+
+  const submitAssignment = async (assignmentId, submissionLink) => {
+    try {
+      await addDoc(collection(db, 'submissions'), {
+        assignmentId, studentId: user.email, studentName: userData.name,
+        rollNo: userData.rollNo, submissionLink, subjectId: selectedSubject,
+        submittedAt: Timestamp.now(), status: 'submitted'
+      });
+      alert('Assignment submitted successfully!');
+      return true;
+    } catch (error) {
+      alert('Error: ' + error.message);
+      return false;
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null); setUserType(null); setUserData(null);
+    setSelectedSubject(null); setSelectedView(null);
+  };
+
+  if (!user) {
+    return <LoginScreen onStudentLogin={handleStudentLogin} onFacultyLogin={handleFacultyLogin} loading={loading} error={error} />;
+  }
+
+  if (userType === 'student') {
+    if (selectedSubject && selectedView === 'assignments') {
+      const course = allCourses.find(c => c.id === selectedSubject);
+      const isSubmitted = (id) => studentSubmissions.some(s => s.assignmentId === id);
+      return <StudentAssignmentsView course={course} assignments={liveAssignments} userData={userData} isSubmitted={isSubmitted} onSubmitAssignment={submitAssignment} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    if (selectedSubject && selectedView === 'syllabus') {
+      const course = allCourses.find(c => c.id === selectedSubject);
+      const syllabus = syllabusData[selectedSubject] || [];
+      return <StudentSyllabusView course={course} syllabus={syllabus} userData={userData} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    if (selectedSubject) {
+      const course = allCourses.find(c => c.id === selectedSubject);
+      return <StudentCourseView course={course} userData={userData} onSelectAssignments={() => setSelectedView('assignments')} onSelectSyllabus={() => setSelectedView('syllabus')} onBack={() => setSelectedSubject(null)} onLogout={handleLogout} />;
+    }
+    return <StudentDashboardView userData={userData} courses={allCourses} onSelectSubject={setSelectedSubject} onLogout={handleLogout} />;
+  }
+
+  if (userType === 'faculty') {
+    const myCourse = allCourses.find(c => c.id === userData.subjectId);
+    if (selectedView === 'create') {
+      return <FacultyCreateView userData={userData} myCourse={myCourse} onCreateAssignment={(t,d,dt,m) => createAssignment(t,d,dt,m,userData.subjectId,userData.subjectName)} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    if (selectedView === 'manage') {
+      const syllabus = syllabusData[userData.subjectId] || [];
+      return <FacultyManageView myCourse={myCourse} syllabus={syllabus} students={Object.values(studentsData)} userData={userData} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    if (selectedView === 'submissions') {
+      return <FacultySubmissionsView myCourse={myCourse} userData={userData} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    return <FacultyDashboardView userData={userData} myCourse={myCourse} onCreateAssignment={() => setSelectedView('create')} onManageSubject={() => setSelectedView('manage')} onViewSubmissions={() => setSelectedView('submissions')} onLogout={handleLogout} />;
+  }
+
+  if (userType === 'coordinator') {
+    if (selectedView === 'create') {
+      return <CoordinatorCreateView userData={userData} courses={allCourses} onCreateAssignment={createAssignment} onBack={() => setSelectedView(null)} onLogout={handleLogout} />;
+    }
+    if (selectedView === 'manage' && selectedSubject) {
+      const course = allCourses.find(c => c.id === selectedSubject);
+      const syllabus = syllabusData[selectedSubject] || [];
+      return <CoordinatorManageView course={course} syllabus={syllabus} students={Object.values(studentsData)} userData={userData} onBack={() => { setSelectedView(null); setSelectedSubject(null); }} onLogout={handleLogout} />;
+    }
+    if (selectedSubject) {
+      const course = allCourses.find(c => c.id === selectedSubject);
+      return <CoordinatorSubjectView course={course} userData={userData} onManage={() => setSelectedView('manage')} onBack={() => setSelectedSubject(null)} onLogout={handleLogout} />;
+    }
+    return <CoordinatorDashboardView userData={userData} courses={allCourses} onSelectSubject={setSelectedSubject} onCreateAssignment={() => setSelectedView('create')} onLogout={handleLogout} />;
+  }
+
   return null;
 }
 
-function LoadingScreen() {
+// Login Screen
+function LoginScreen({ onStudentLogin, onFacultyLogin, loading, error }) {
+  const [loginType, setLoginType] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  if (loginType === null) {
+    return (
+      <div style={styles.loginContainer}>
+        <div style={styles.logoSection}>
+          <h1 style={styles.logoText}>AssignX</h1>
+          <p style={styles.tagline}>ASSIGN | LEARN | GROW</p>
+          <p style={styles.subTagline}>Assignments that build skills, not just grades.</p>
+        </div>
+        <div style={styles.choiceContainer}>
+          <div style={styles.choiceCard} onClick={() => setLoginType('student')}>
+            <h2>Student Login</h2>
+            <p>Access your courses, assignments, and marks</p>
+          </div>
+          <div style={styles.choiceCard} onClick={() => setLoginType('faculty')}>
+            <h2>Faculty Login</h2>
+            <p>Manage courses, create live assignments</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={styles.loadingContainer}>
-      <div style={styles.spinner}></div>
-      <h2>Loading AssignX</h2>
-      <p>Preparing your learning platform...</p>
+    <div style={styles.loginCard}>
+      <button onClick={() => setLoginType(null)} style={styles.backBtn}>Back</button>
+      <h2 style={styles.subtitle}>{loginType === 'student' ? 'Student Login' : 'Faculty Login'}</h2>
+      {error && <div style={styles.error}>{error}</div>}
+      <form onSubmit={(e) => { e.preventDefault(); if (loginType === 'student') onStudentLogin(email, password); else onFacultyLogin(email, password); }}>
+        <input type="email" placeholder="Email Address" style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Password" style={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <button type="submit" style={styles.button} disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
+      </form>
+      <div style={styles.demoInfo}>
+        {loginType === 'student' ? (
+          <div><strong>Student Logins:</strong><br/>sneha@assignx.com / 240010130100<br/>bhumikagoyal@assignx.com / 240010130095<br/>gauri@assignx.com / 240010130104</div>
+        ) : (
+          <div><strong>Faculty Logins:</strong><br/>faculty.mpi@assignx.com / faculty123<br/>faculty.cn@assignx.com / faculty123<br/>faculty.dbms@assignx.com / faculty123<br/>faculty.ada@assignx.com / faculty123<br/>faculty.se@assignx.com / faculty123<br/>faculty.java@assignx.com / faculty123<br/><strong>Coordinator:</strong> coordinator@assignx.com / coordinator123</div>
+        )}
+      </div>
     </div>
   );
 }
 
-function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-      const data = userDoc.data();
-      onLogin(result.user, data?.role || 'student', data?.name || result.user.email);
-    } catch (err) {
-      setError('Invalid email or password');
-    }
-    setLoading(false);
-  };
-
+// Student Views
+function StudentDashboardView({ userData, courses, onSelectSubject, onLogout }) {
+  const totalMarks = Object.values(userData.minor1).reduce((a,b)=>a+b,0) + Object.values(userData.minor2).reduce((a,b)=>a+b,0);
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logoSection}>
-          <div style={styles.logoIcon}>??</div>
-          <h1 style={styles.title}>AssignX</h1>
-          <p style={styles.tagline}>Transform assignments into measurable skills</p>
-        </div>
-        <h2 style={styles.subtitle}>Welcome Back</h2>
-        {error && <div style={styles.error}>{error}</div>}
-        <form onSubmit={handleLogin}>
-          <input type="email" placeholder="Email Address" style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <input type="password" placeholder="Password" style={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <button type="submit" style={styles.button} disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
-        </form>
-        <p style={styles.footer}>New user? <button onClick={() => window.location.reload()} style={styles.link}>Create Account</button></p>
-        <div style={styles.demoBox}>
-          <p><strong>Demo Accounts:</strong></p>
-          <p>Faculty: faculty@assignx.com / test123456</p>
-          <p>Student: student@assignx.com / test123456</p>
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX - Student</h1><div style={styles.userInfo}><span>Hello, {userData.name}</span><span>CGPA: {userData.cgpa}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <div style={styles.welcomeCard}><h2>Welcome, {userData.name}!</h2><p>Roll No: {userData.rollNo} | Percentage: {(totalMarks/360*100).toFixed(1)}%</p></div>
+        <h2 style={styles.sectionTitle}>Your Courses</h2>
+        <div style={styles.courseGrid}>{courses.map(c => (<div key={c.id} style={styles.courseCard} onClick={() => onSelectSubject(c.id)}><h3>{c.name}</h3><p>{c.code}</p><div style={styles.courseStats}><span>Minor1: {userData.minor1[c.id]}/30</span><span>Minor2: {userData.minor2[c.id]}/30</span></div><button style={styles.viewBtn}>View Course -{'>'}</button></div>))}</div>
+      </div>
+    </div>
+  );
+}
+
+function StudentCourseView({ course, userData, onSelectAssignments, onSelectSyllabus, onBack, onLogout }) {
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX</h1><div style={styles.userInfo}><span>{userData.name}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <button onClick={onBack} style={styles.backBtn}>Back to Dashboard</button>
+        <div style={styles.courseHeader}><h1>{course.name}</h1><p>Code: {course.code} | Faculty: {course.faculty}</p></div>
+        <div style={styles.choiceContainer}>
+          <div style={styles.choiceCardLarge} onClick={onSelectAssignments}><h2>Live Assignments</h2><p>View and submit assignments</p><button style={styles.viewBtn}>View Assignments -{'>'}</button></div>
+          <div style={styles.choiceCardLarge} onClick={onSelectSyllabus}><h2>Syllabus</h2><p>Course syllabus and material</p><button style={styles.viewBtn}>View Syllabus -{'>'}</button></div>
         </div>
       </div>
     </div>
   );
 }
 
-function SignupPage({ onSignup }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    if (password.length < 6) { setError('Password must be at least 6 characters'); setLoading(false); return; }
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', result.user.uid), {
-        name, email, role, totalEcoScore: 0, createdAt: new Date().toISOString()
-      });
-      alert('Account created successfully! Please login.');
-      onSignup();
-    } catch (err) { setError(err.message); }
-    setLoading(false);
-  };
-
+function StudentAssignmentsView({ course, assignments, userData, isSubmitted, onSubmitAssignment, onBack, onLogout }) {
+  const [link, setLink] = useState('');
+  const [submitting, setSubmitting] = useState(null);
+  const handleSubmit = async (id) => { if (!link) { alert('Enter submission link'); return; } await onSubmitAssignment(id, link); setSubmitting(null); setLink(''); };
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logoSection}>
-          <div style={styles.logoIcon}>??</div>
-          <h1 style={styles.title}>AssignX</h1>
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX</h1><div style={styles.userInfo}><span>{userData.name}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.courseHeader}><h1>{course.name} - Assignments</h1></div>
+        <div style={styles.assignmentsContainer}>
+          {assignments.length === 0 ? <div style={styles.emptyState}>No assignments yet.</div> : assignments.map(a => {
+            const submitted = isSubmitted(a.id);
+            return (<div key={a.id} style={styles.assignmentCard}><div style={styles.assignmentHeader}><h3>{a.title}</h3><span style={submitted ? styles.submittedBadge : styles.pendingBadge}>{submitted ? 'Submitted' : 'Pending'}</span></div><p>{a.description}</p><div style={styles.assignmentDetails}><span>Due: {a.dueDate?.toDate().toLocaleDateString()}</span><span>Max Marks: {a.maxMarks}</span><span>Faculty: {a.facultyName}</span></div>{!submitted && submitting === a.id ? (<div><input type="url" placeholder="Submission Link" style={styles.inputSmall} value={link} onChange={(e) => setLink(e.target.value)} /><div style={styles.formActions}><button onClick={() => handleSubmit(a.id)} style={styles.submitBtn}>Confirm</button><button onClick={() => setSubmitting(null)} style={styles.cancelBtn}>Cancel</button></div></div>) : !submitted && <button onClick={() => setSubmitting(a.id)} style={styles.submitBtn}>Submit</button>}</div>);
+          })}
         </div>
-        <h2 style={styles.subtitle}>Create Account</h2>
-        {error && <div style={styles.error}>{error}</div>}
-        <form onSubmit={handleSignup}>
-          <input type="text" placeholder="Full Name" style={styles.input} value={name} onChange={(e) => setName(e.target.value)} required />
-          <input type="email" placeholder="Email Address" style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <input type="password" placeholder="Password (min 6 characters)" style={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <div style={styles.radioGroup}>
-            <label style={styles.radioLabel}><input type="radio" value="student" checked={role === 'student'} onChange={(e) => setRole(e.target.value)} /> Student</label>
-            <label style={styles.radioLabel}><input type="radio" value="faculty" checked={role === 'faculty'} onChange={(e) => setRole(e.target.value)} /> Faculty</label>
-          </div>
-          <button type="submit" style={styles.button} disabled={loading}>{loading ? 'Creating account...' : 'Sign Up'}</button>
-        </form>
       </div>
     </div>
   );
 }
 
-function StudentDashboard({ user, userName, onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [assignments, setAssignments] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
-  const [showSubmit, setShowSubmit] = useState(null);
-  const [proofLink, setProofLink] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [doubts, setDoubts] = useState([]);
-  const [newDoubt, setNewDoubt] = useState('');
-
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
-    const assignmentsSnap = await getDocs(query(collection(db, 'assignments'), where('isActive', '==', true)));
-    setAssignments(assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    const submissionsSnap = await getDocs(query(collection(db, 'submissions'), where('studentId', '==', user.uid)));
-    setSubmissions(submissionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    const doubtsSnap = await getDocs(query(collection(db, 'doubts'), where('studentId', '==', user.uid)));
-    setDoubts(doubtsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
-
-  const handleAddDoubt = async () => {
-    if (!newDoubt.trim()) return;
-    await addDoc(collection(db, 'doubts'), {
-      studentId: user.uid,
-      studentName: userName,
-      doubt: newDoubt,
-      answer: '',
-      status: 'pending',
-      createdAt: Timestamp.now()
-    });
-    setNewDoubt('');
-    loadData();
-    alert('Doubt posted! Faculty will answer soon.');
-  };
-
-  const totalPages = submissions.length * 15;
-  const treesSaved = Math.floor(totalPages / 500);
-
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'dashboard':
-        return (
-          <div>
-            <div style={styles.ecoHero}>
-              <div><h2 style={styles.heroTitle}>Your Eco Impact</h2><p>Every digital submission saves paper and trees</p></div>
-              <div style={styles.heroStats}>
-                <div><div style={styles.statNumber}>{totalPages}</div><div>Pages Saved</div></div>
-                <div><div style={styles.statNumber}>{treesSaved}</div><div>Trees Saved</div></div>
-                <div><div style={styles.statNumber}>{submissions.length}</div><div>Submissions</div></div>
-              </div>
-            </div>
-            <h2 style={styles.sectionTitle}>Current Assignments</h2>
-            <div style={styles.grid}>
-              {assignments.map(assign => {
-                const submitted = submissions.some(s => s.assignmentId === assign.id);
-                const sub = submissions.find(s => s.assignmentId === assign.id);
-                return (
-                  <div key={assign.id} style={styles.card}>
-                    <div style={styles.cardHeader}><h3>{assign.title}</h3>{submitted ? <span style={styles.submittedBadge}>Submitted</span> : <span style={styles.pendingBadge}>Pending</span>}</div>
-                    <p style={styles.cardDesc}>{assign.description}</p>
-                    <div style={styles.cardInfo}><span>Total: {assign.totalMarks} marks</span><span>Due: {assign.dueDate?.toDate().toLocaleDateString()}</span></div>
-                    {assign.rubric && (<div style={styles.rubricPreview}><span>Implementation: {assign.rubric.implementation}</span><span>Creativity: {assign.rubric.creativity}</span><span>Presentation: {assign.rubric.presentation}</span></div>)}
-                    {submitted && sub?.marks && (<div style={styles.scoreBox}><span>Score: {sub.marks.total}/{assign.totalMarks}</span>{sub.feedback && <span>Feedback: "{sub.feedback}"</span>}</div>)}
-                    {!submitted && showSubmit === assign.id ? (
-                      <div style={styles.submitForm}>
-                        <input placeholder="GitHub / YouTube Link" style={styles.inputSmall} value={proofLink} onChange={(e) => setProofLink(e.target.value)} />
-                        <input type="file" accept="image/*,.pdf" onChange={(e) => setSelectedFile(e.target.files[0])} style={styles.fileInput} />
-                        <textarea placeholder="Describe your work..." rows="2" style={styles.textareaSmall} value={description} onChange={(e) => setDescription(e.target.value)} />
-                        <div style={styles.formActions}>
-                          <button onClick={async () => { setUploading(true); try { let url = proofLink; if (selectedFile) { const storageRef = ref(storage, `submissions/${user.uid}/${Date.now()}_${selectedFile.name}`); await uploadBytes(storageRef, selectedFile); url = await getDownloadURL(storageRef); } await addDoc(collection(db, 'submissions'), { assignmentId: assign.id, studentId: user.uid, proofLink: url, description, status: 'submitted', submittedAt: Timestamp.now(), ecoScore: 15 }); await updateDoc(doc(db, 'users', user.uid), { totalEcoScore: increment(15) }); alert('Submitted!'); setShowSubmit(null); loadData(); } catch(err) { alert('Error: ' + err.message); } setUploading(false); }} style={styles.submitBtn} disabled={uploading}>{uploading ? 'Uploading...' : 'Submit'}</button>
-                          <button onClick={() => setShowSubmit(null)} style={styles.cancelBtn}>Cancel</button>
-                        </div>
-                      </div>
-                    ) : !submitted && (<button onClick={() => setShowSubmit(assign.id)} style={styles.actionBtn}>Submit Assignment</button>)}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      case 'courses':
-        return (
-          <div>
-            <h2 style={styles.sectionTitle}>Semester 4 - Computer Science Engineering</h2>
-            <h3 style={styles.subsectionTitle}>Theory Courses</h3>
-            <div style={styles.courseGrid}>
-              {semesterCourses.theory.map(course => (
-                <div key={course.code} style={styles.courseCard}>
-                  <h4>{course.name}</h4>
-                  <p><strong>Code:</strong> {course.code}</p>
-                  <p><strong>Credits:</strong> {course.credits}</p>
-                </div>
-              ))}
-            </div>
-            <h3 style={styles.subsectionTitle}>Practical Courses</h3>
-            <div style={styles.courseGrid}>
-              {semesterCourses.practical.map(course => (
-                <div key={course.code} style={styles.courseCard}>
-                  <h4>{course.name}</h4>
-                  <p><strong>Code:</strong> {course.code}</p>
-                  <p><strong>Credits:</strong> {course.credits}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 'doubts':
-        return (
-          <div>
-            <h2 style={styles.sectionTitle}>Ask a Doubt</h2>
-            <div style={styles.doubtForm}>
-              <textarea placeholder="Type your doubt here..." rows="3" style={styles.input} value={newDoubt} onChange={(e) => setNewDoubt(e.target.value)} />
-              <button onClick={handleAddDoubt} style={styles.submitBtn}>Post Doubt</button>
-            </div>
-            <h3 style={styles.subsectionTitle}>Your Doubts</h3>
-            <div style={styles.doubtsList}>
-              {doubts.map(doubt => (
-                <div key={doubt.id} style={styles.doubtCard}>
-                  <p><strong>Question:</strong> {doubt.doubt}</p>
-                  {doubt.answer ? <p><strong style={{ color: '#4caf50' }}>Answer:</strong> {doubt.answer}</p> : <p><strong style={{ color: '#ff9800' }}>Status:</strong> Waiting for faculty response...</p>}
-                  <p><small>Posted: {doubt.createdAt?.toDate().toLocaleDateString()}</small></p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      default: return null;
-    }
-  };
-
+function StudentSyllabusView({ course, syllabus, userData, onBack, onLogout }) {
   return (
     <div>
-      <nav style={styles.navbar}>
-        <div style={styles.navContent}>
-          <h1 style={styles.logo}>AssignX</h1>
-          <div style={styles.navTabs}>
-            <button onClick={() => setActiveTab('dashboard')} style={{...styles.navTab, background: activeTab === 'dashboard' ? '#fff' : 'transparent', color: activeTab === 'dashboard' ? '#667eea' : 'white'}}>Dashboard</button>
-            <button onClick={() => setActiveTab('courses')} style={{...styles.navTab, background: activeTab === 'courses' ? '#fff' : 'transparent', color: activeTab === 'courses' ? '#667eea' : 'white'}}>My Courses</button>
-            <button onClick={() => setActiveTab('doubts')} style={{...styles.navTab, background: activeTab === 'doubts' ? '#fff' : 'transparent', color: activeTab === 'doubts' ? '#667eea' : 'white'}}>Ask Doubt</button>
-          </div>
-          <div style={styles.navLinks}>
-            <span style={styles.userInfo}>Hello {userName}</span>
-            <button onClick={onLogout} style={styles.logoutBtn}>Logout</button>
-          </div>
-        </div>
-      </nav>
-      <div style={styles.content}>{renderContent()}</div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX</h1><div style={styles.userInfo}><span>{userData.name}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.courseHeader}><h1>{course.name} - Syllabus</h1></div>
+        <div style={styles.syllabusContainer}>{syllabus.map((unit, i) => (<div key={i} style={styles.unitCard}><h3>{unit}</h3></div>))}</div>
+      </div>
     </div>
   );
 }
 
-function FacultyDashboard({ user, userName, onLogout }) {
-  const [activeTab, setActiveTab] = useState('assignments');
-  const [assignments, setAssignments] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
-  const [students, setStudents] = useState({});
-  const [doubts, setDoubts] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [implMarks, setImplMarks] = useState(10);
-  const [creativeMarks, setCreativeMarks] = useState(5);
-  const [presMarks, setPresMarks] = useState(5);
-  const [evaluating, setEvaluating] = useState(null);
-  const [marks, setMarks] = useState({ implementation: 0, creativity: 0, presentation: 0 });
-  const [feedback, setFeedback] = useState('');
-  const [answeringDoubt, setAnsweringDoubt] = useState(null);
-  const [answerText, setAnswerText] = useState('');
-
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
-    const assignmentsSnap = await getDocs(collection(db, 'assignments'));
-    setAssignments(assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    const submissionsSnap = await getDocs(collection(db, 'submissions'));
-    setSubmissions(submissionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    const studentsSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
-    const studentsData = {};
-    studentsSnap.docs.forEach(doc => { studentsData[doc.id] = doc.data().name; });
-    setStudents(studentsData);
-    const doubtsSnap = await getDocs(collection(db, 'doubts'));
-    setDoubts(doubtsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
-
-  const createAssignment = async () => {
-    if (!title || !description || !dueDate) { alert('Please fill all fields'); return; }
-    try {
-      await addDoc(collection(db, 'assignments'), {
-        title, description, dueDate: Timestamp.fromDate(new Date(dueDate)),
-        rubric: { implementation: implMarks, creativity: creativeMarks, presentation: presMarks },
-        totalMarks: implMarks + creativeMarks + presMarks, createdBy: user.uid, createdAt: Timestamp.now(), isActive: true
-      });
-      alert('Assignment created! Visible to all students.');
-      setShowForm(false);
-      setTitle(''); setDescription(''); setDueDate('');
-      loadData();
-    } catch (err) { alert('Error: ' + err.message); }
-  };
-
-  const evaluateSubmission = async (submissionId, rubric) => {
-    const total = marks.implementation + marks.creativity + marks.presentation;
-    if (total > (rubric.implementation + rubric.creativity + rubric.presentation)) {
-      alert('Marks exceed maximum allowed!');
-      return;
-    }
-    try {
-      await updateDoc(doc(db, 'submissions', submissionId), {
-        marks: { ...marks, total }, feedback, status: 'evaluated', evaluatedAt: Timestamp.now()
-      });
-      alert('Evaluation submitted! Student can see it.');
-      setEvaluating(null);
-      setMarks({ implementation: 0, creativity: 0, presentation: 0 });
-      setFeedback('');
-      loadData();
-    } catch (err) { alert('Error: ' + err.message); }
-  };
-
-  const answerDoubt = async (doubtId) => {
-    if (!answerText.trim()) return;
-    try {
-      await updateDoc(doc(db, 'doubts', doubtId), {
-        answer: answerText,
-        status: 'answered',
-        answeredAt: Timestamp.now(),
-        answeredBy: user.uid
-      });
-      alert('Answer posted! Student can see it.');
-      setAnsweringDoubt(null);
-      setAnswerText('');
-      loadData();
-    } catch (err) { alert('Error: ' + err.message); }
-  };
-
-  const studentPerformance = () => {
-    const performance = {};
-    Object.keys(students).forEach(studentId => {
-      const studentSubs = submissions.filter(s => s.studentId === studentId);
-      const totalMarks = studentSubs.reduce((sum, s) => sum + (s.marks?.total || 0), 0);
-      const maxPossible = studentSubs.reduce((sum, s) => {
-        const assign = assignments.find(a => a.id === s.assignmentId);
-        return sum + (assign?.totalMarks || 0);
-      }, 0);
-      performance[studentId] = {
-        name: students[studentId],
-        submissions: studentSubs.length,
-        totalMarks,
-        maxPossible,
-        percentage: maxPossible > 0 ? Math.round((totalMarks / maxPossible) * 100) : 0
-      };
-    });
-    return performance;
-  };
-
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'assignments':
-        return (
-          <div>
-            <div style={styles.header}><h2>Manage Assignments</h2><button onClick={() => setShowForm(!showForm)} style={styles.createBtn}>+ Create Assignment</button></div>
-            {showForm && (
-              <div style={styles.formCard}>
-                <h3>Create New Assignment (All Students See Instantly)</h3>
-                <input placeholder="Assignment Title" style={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} />
-                <textarea placeholder="Description" rows="3" style={styles.input} value={description} onChange={(e) => setDescription(e.target.value)} />
-                <input type="date" style={styles.input} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                <h4>Rubric</h4>
-                <div><label>Implementation: {implMarks}/10</label><input type="range" min="0" max="10" value={implMarks} onChange={(e) => setImplMarks(parseInt(e.target.value))} /></div>
-                <div><label>Creativity: {creativeMarks}/5</label><input type="range" min="0" max="5" value={creativeMarks} onChange={(e) => setCreativeMarks(parseInt(e.target.value))} /></div>
-                <div><label>Presentation: {presMarks}/5</label><input type="range" min="0" max="5" value={presMarks} onChange={(e) => setPresMarks(parseInt(e.target.value))} /></div>
-                <button onClick={createAssignment} style={styles.publishBtn}>Publish Assignment</button>
-              </div>
-            )}
-            <h2 style={styles.sectionTitle}>Your Assignments</h2>
-            <div style={styles.grid}>
-              {assignments.map(assign => {
-                const subForAssign = submissions.filter(s => s.assignmentId === assign.id);
-                return (
-                  <div key={assign.id} style={styles.card}>
-                    <h3>{assign.title}</h3>
-                    <p>{assign.description}</p>
-                    <div>Due: {assign.dueDate?.toDate().toLocaleDateString()} | Submissions: {subForAssign.length}</div>
-                    {subForAssign.map(sub => evaluating === sub.id ? (
-                      <div key={sub.id} style={styles.evalBox}>
-                        <p><strong>Student:</strong> {students[sub.studentId]}</p>
-                        <p><strong>Submission:</strong> <a href={sub.proofLink} target="_blank">View Work</a></p>
-                        <div><label>Implementation: </label><input type="range" min="0" max={assign.rubric?.implementation} onChange={(e) => setMarks({...marks, implementation: parseInt(e.target.value)})} /> {marks.implementation}</div>
-                        <div><label>Creativity: </label><input type="range" min="0" max={assign.rubric?.creativity} onChange={(e) => setMarks({...marks, creativity: parseInt(e.target.value)})} /> {marks.creativity}</div>
-                        <div><label>Presentation: </label><input type="range" min="0" max={assign.rubric?.presentation} onChange={(e) => setMarks({...marks, presentation: parseInt(e.target.value)})} /> {marks.presentation}</div>
-                        <textarea placeholder="Feedback" rows="2" style={styles.inputSmall} value={feedback} onChange={(e) => setFeedback(e.target.value)} />
-                        <button onClick={() => evaluateSubmission(sub.id, assign.rubric)} style={styles.submitBtn}>Submit Evaluation</button>
-                        <button onClick={() => setEvaluating(null)} style={styles.cancelBtn}>Cancel</button>
-                      </div>
-                    ) : (
-                      <div key={sub.id} style={styles.subBox}>
-                        <span><strong>{students[sub.studentId]}</strong> - {sub.status === 'evaluated' ? `Scored: ${sub.marks?.total}/${assign.totalMarks}` : 'Pending'}</span>
-                        {sub.status !== 'evaluated' && <button onClick={() => setEvaluating(sub.id)} style={styles.evaluateBtn}>Evaluate</button>}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      case 'performance':
-        const performance = studentPerformance();
-        return (
-          <div>
-            <h2 style={styles.sectionTitle}>Student Performance Overview</h2>
-            <div style={styles.performanceTable}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr style={{ background: '#667eea', color: 'white' }}><th style={styles.th}>Student Name</th><th style={styles.th}>Submissions</th><th style={styles.th}>Total Marks</th><th style={styles.th}>Percentage</th><th style={styles.th}>Status</th></tr></thead>
-                <tbody>
-                  {Object.values(performance).map((student, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                      <td style={styles.td}>{student.name}</td>
-                      <td style={styles.td}>{student.submissions}</td>
-                      <td style={styles.td}>{student.totalMarks}/{student.maxPossible}</td>
-                      <td style={styles.td}>{student.percentage}%</td>
-                      <td style={styles.td}>{student.percentage >= 60 ? 'Good' : student.percentage >= 40 ? 'Average' : 'Needs Improvement'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      case 'doubts':
-        return (
-          <div>
-            <h2 style={styles.sectionTitle}>Student Doubts</h2>
-            <div style={styles.doubtsList}>
-              {doubts.map(doubt => answeringDoubt === doubt.id ? (
-                <div key={doubt.id} style={styles.doubtCard}>
-                  <p><strong>Student:</strong> {doubt.studentName}</p>
-                  <p><strong>Question:</strong> {doubt.doubt}</p>
-                  <textarea placeholder="Type your answer..." rows="3" style={styles.input} value={answerText} onChange={(e) => setAnswerText(e.target.value)} />
-                  <div style={styles.formActions}>
-                    <button onClick={() => answerDoubt(doubt.id)} style={styles.submitBtn}>Post Answer</button>
-                    <button onClick={() => setAnsweringDoubt(null)} style={styles.cancelBtn}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <div key={doubt.id} style={styles.doubtCard}>
-                  <p><strong>Student:</strong> {doubt.studentName}</p>
-                  <p><strong>Question:</strong> {doubt.doubt}</p>
-                  {doubt.answer ? <p><strong style={{ color: '#4caf50' }}>Answer:</strong> {doubt.answer}</p> : <button onClick={() => setAnsweringDoubt(doubt.id)} style={styles.evaluateBtn}>Answer Doubt</button>}
-                  <p><small>Posted: {doubt.createdAt?.toDate().toLocaleDateString()}</small></p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      default: return null;
-    }
-  };
-
+// Faculty Views
+function FacultyDashboardView({ userData, myCourse, onCreateAssignment, onManageSubject, onViewSubmissions, onLogout }) {
   return (
     <div>
-      <nav style={styles.navbar}>
-        <div style={styles.navContent}>
-          <h1 style={styles.logo}>AssignX - Faculty Portal</h1>
-          <div style={styles.navTabs}>
-            <button onClick={() => setActiveTab('assignments')} style={{...styles.navTab, background: activeTab === 'assignments' ? '#fff' : 'transparent', color: activeTab === 'assignments' ? '#667eea' : 'white'}}>Assignments</button>
-            <button onClick={() => setActiveTab('performance')} style={{...styles.navTab, background: activeTab === 'performance' ? '#fff' : 'transparent', color: activeTab === 'performance' ? '#667eea' : 'white'}}>Student Performance</button>
-            <button onClick={() => setActiveTab('doubts')} style={{...styles.navTab, background: activeTab === 'doubts' ? '#fff' : 'transparent', color: activeTab === 'doubts' ? '#667eea' : 'white'}}>Doubts</button>
-          </div>
-          <div style={styles.navLinks}>
-            <span style={styles.userInfo}>Hello Professor {userName}</span>
-            <button onClick={onLogout} style={styles.logoutBtn}>Logout</button>
-          </div>
-        </div>
-      </nav>
-      <div style={styles.content}>{renderContent()}</div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX - Faculty</h1><div style={styles.userInfo}><span>{userData.name}</span><span>Teaching: {userData.subjectName}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <div style={styles.welcomeCard}><h2>Welcome, {userData.name}!</h2><p>Teaching: <strong>{userData.subjectName}</strong></p></div>
+        <div style={styles.singleCourseCard}><h3>{myCourse.name}</h3><p>{myCourse.code}</p><div style={styles.buttonGroup}><button onClick={onCreateAssignment} style={styles.secondaryBtn}>Create Assignment</button><button onClick={onManageSubject} style={styles.primaryBtn}>Syllabus</button><button onClick={onViewSubmissions} style={styles.infoBtn}>Submissions</button></div></div>
+      </div>
     </div>
   );
 }
 
+function FacultyCreateView({ userData, myCourse, onCreateAssignment, onBack, onLogout }) {
+  const [title, setTitle] = useState(''); const [desc, setDesc] = useState(''); const [due, setDue] = useState(''); const [marks, setMarks] = useState(30);
+  const handleSubmit = (e) => { e.preventDefault(); if (!title || !desc || !due) { alert('Fill all fields'); return; } onCreateAssignment(title, desc, due, marks); setTitle(''); setDesc(''); setDue(''); onBack(); };
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>Create Assignment</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.formCard}><h2>Create Assignment for {userData.subjectName}</h2><form onSubmit={handleSubmit}><input placeholder="Title" style={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} required /><textarea placeholder="Description" rows="3" style={styles.input} value={desc} onChange={(e) => setDesc(e.target.value)} required /><input type="date" style={styles.input} value={due} onChange={(e) => setDue(e.target.value)} required /><input type="number" placeholder="Max Marks" style={styles.input} value={marks} onChange={(e) => setMarks(parseInt(e.target.value))} required /><button type="submit" style={styles.publishBtn}>Publish</button></form></div>
+      </div>
+    </div>
+  );
+}
+
+function FacultyManageView({ myCourse, syllabus, students, userData, onBack, onLogout }) {
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>Syllabus</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.courseHeader}><h1>{myCourse.name} - Syllabus</h1></div>
+        <div style={styles.syllabusContainer}>{syllabus.map((unit, i) => (<div key={i} style={styles.unitCard}><h3>{unit}</h3></div>))}</div>
+      </div>
+    </div>
+  );
+}
+
+function FacultySubmissionsView({ myCourse, userData, onBack, onLogout }) {
+  const [submissions, setSubmissions] = useState([]);
+  useEffect(() => {
+    const q = query(collection(db, 'submissions'));
+    return onSnapshot(q, (snapshot) => {
+      const allSubs = [];
+      snapshot.forEach((doc) => allSubs.push({ id: doc.id, ...doc.data() }));
+      setSubmissions(allSubs);
+    });
+  }, []);
+  const courseSubmissions = submissions.filter(s => s.subjectId === myCourse.id);
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>Submissions</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.courseHeader}><h1>{myCourse.name} - Submissions</h1></div>
+        <div style={styles.assignmentsContainer}>{courseSubmissions.length === 0 ? <div style={styles.emptyState}>No submissions yet.</div> : courseSubmissions.map(sub => (<div key={sub.id} style={styles.assignmentCard}><div style={styles.assignmentHeader}><h3>{sub.studentName} ({sub.rollNo})</h3><span style={styles.pendingBadge}>Pending</span></div><p><strong>Link:</strong> <a href={sub.submissionLink} target="_blank" rel="noopener noreferrer">View</a></p><div style={styles.assignmentDetails}><span>Submitted: {sub.submittedAt?.toDate().toLocaleDateString()}</span></div><button style={styles.submitBtn}>Evaluate</button></div>))}</div>
+      </div>
+    </div>
+  );
+}
+
+// Coordinator Views
+function CoordinatorDashboardView({ userData, courses, onSelectSubject, onCreateAssignment, onLogout }) {
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX - Coordinator</h1><div style={styles.userInfo}><span>{userData.name}</span><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></div></nav>
+      <div style={styles.content}>
+        <div style={styles.welcomeCard}><h2>Welcome, {userData.name}!</h2><p>Access to all subjects</p></div>
+        <h2 style={styles.sectionTitle}>All Subjects</h2>
+        <div style={styles.courseGrid}>{courses.map(c => (<div key={c.id} style={styles.courseCard} onClick={() => onSelectSubject(c.id)}><h3>{c.name}</h3><p>{c.code} | Faculty: {c.faculty}</p><button style={styles.viewBtn}>Manage -{'>'}</button></div>))}<div style={styles.courseCard} onClick={onCreateAssignment}><h3>Create Assignment</h3><p>Post for any subject</p><button style={styles.viewBtn}>Create -{'>'}</button></div></div>
+      </div>
+    </div>
+  );
+}
+
+function CoordinatorSubjectView({ course, userData, onManage, onBack, onLogout }) {
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>AssignX</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.courseHeader}><h1>{course.name}</h1><p>{course.code} | Faculty: {course.faculty}</p></div>
+        <div style={styles.choiceContainerLarge}><div style={styles.choiceCardLarge} onClick={onManage}><h2>Manage Subject</h2><p>View syllabus and students</p><button style={styles.viewBtn}>Manage -{'>'}</button></div></div>
+      </div>
+    </div>
+  );
+}
+
+function CoordinatorManageView({ course, syllabus, students, userData, onBack, onLogout }) {
+  const [tab, setTab] = useState('syllabus');
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>Manage {course.name}</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.tabContainer}><button onClick={() => setTab('syllabus')} style={{...styles.tab, background: tab === 'syllabus' ? '#667eea' : '#f0f0f0', color: tab === 'syllabus' ? 'white' : '#333'}}>Syllabus</button><button onClick={() => setTab('students')} style={{...styles.tab, background: tab === 'students' ? '#667eea' : '#f0f0f0', color: tab === 'students' ? 'white' : '#333'}}>Students</button></div>
+        {tab === 'syllabus' && (<div style={styles.syllabusContainer}>{syllabus.map((unit, i) => (<div key={i} style={styles.unitCard}><h3>{unit}</h3></div>))}</div>)}
+        {tab === 'students' && (<div style={styles.studentsTable}><table style={{width:'100%'}}><thead><tr style={{background:'#667eea', color:'white'}}><th>Roll No</th><th>Name</th><th>Minor1</th><th>Minor2</th><th>Total</th><th>%</th></tr></thead><tbody>{students.map(s => { const m1 = s.minor1[course.id] || 0; const m2 = s.minor2[course.id] || 0; const t = m1 + m2; return (<tr key={s.rollNo}><td>{s.rollNo}</td><td>{s.name}</td><td>{m1}/30</td><td>{m2}/30</td><td>{t}/60</td><td>{((t/60)*100).toFixed(1)}%</td></tr>); })}</tbody></table></div>)}
+      </div>
+    </div>
+  );
+}
+
+function CoordinatorCreateView({ userData, courses, onCreateAssignment, onBack, onLogout }) {
+  const [title, setTitle] = useState(''); const [desc, setDesc] = useState(''); const [due, setDue] = useState(''); const [marks, setMarks] = useState(30); const [subject, setSubject] = useState('');
+  const selected = courses.find(c => c.id === subject);
+  const handleSubmit = (e) => { e.preventDefault(); if (!title || !desc || !due || !subject) { alert('Fill all fields'); return; } onCreateAssignment(title, desc, due, marks, subject, selected.name); setTitle(''); setDesc(''); setDue(''); setSubject(''); onBack(); };
+  return (
+    <div>
+      <nav style={styles.navbar}><div style={styles.navContent}><h1 style={styles.logo}>Create Assignment</h1><button onClick={onLogout} style={styles.logoutBtn}>Logout</button></div></nav>
+      <div style={styles.content}><button onClick={onBack} style={styles.backBtn}>Back</button>
+        <div style={styles.formCard}><h2>Create Assignment</h2><form onSubmit={handleSubmit}><select style={styles.input} value={subject} onChange={(e) => setSubject(e.target.value)} required><option value="">Select Subject</option>{courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><input placeholder="Title" style={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} required /><textarea placeholder="Description" rows="3" style={styles.input} value={desc} onChange={(e) => setDesc(e.target.value)} required /><input type="date" style={styles.input} value={due} onChange={(e) => setDue(e.target.value)} required /><input type="number" placeholder="Max Marks" style={styles.input} value={marks} onChange={(e) => setMarks(parseInt(e.target.value))} required /><button type="submit" style={styles.publishBtn}>Publish</button></form></div>
+      </div>
+    </div>
+  );
+}
+
+// Styles
 const styles = {
-  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  loadingContainer: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' },
-  spinner: { width: '50px', height: '50px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' },
-  card: { backgroundColor: 'white', padding: '40px', borderRadius: '20px', width: '100%', maxWidth: '450px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
-  logoSection: { textAlign: 'center', marginBottom: '20px' },
-  logoIcon: { fontSize: '48px' },
-  title: { fontSize: '36px', fontWeight: 'bold', color: '#667eea', margin: '10px 0 5px' },
-  tagline: { color: '#666', fontSize: '14px' },
-  subtitle: { fontSize: '20px', textAlign: 'center', marginBottom: '25px', color: '#333' },
+  loginContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' },
+  logoSection: { textAlign: 'center', marginBottom: '50px' },
+  logoText: { fontSize: '56px', fontWeight: 'bold', color: 'white', letterSpacing: '2px' },
+  tagline: { fontSize: '20px', color: 'rgba(255,255,255,0.9)', letterSpacing: '4px', marginTop: '10px' },
+  subTagline: { fontSize: '16px', color: 'rgba(255,255,255,0.7)', marginTop: '10px' },
+  choiceContainer: { display: 'flex', gap: '40px', justifyContent: 'center', flexWrap: 'wrap' },
+  choiceCard: { background: 'white', padding: '40px', borderRadius: '20px', textAlign: 'center', cursor: 'pointer', width: '280px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' },
+  loginCard: { background: 'white', padding: '40px', borderRadius: '20px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' },
+  backBtn: { background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '14px', marginBottom: '20px' },
+  subtitle: { fontSize: '24px', textAlign: 'center', marginBottom: '30px', color: '#333' },
   input: { width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' },
-  inputSmall: { width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' },
-  textareaSmall: { width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' },
-  fileInput: { marginBottom: '10px' },
-  button: { width: '100%', padding: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold' },
-  error: { backgroundColor: '#fee', color: '#c62828', padding: '10px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' },
-  footer: { textAlign: 'center', marginTop: '20px', color: '#666' },
-  link: { background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', textDecoration: 'underline' },
-  demoBox: { marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '10px', fontSize: '12px', textAlign: 'center' },
-  radioGroup: { marginBottom: '15px', display: 'flex', gap: '20px', justifyContent: 'center' },
-  radioLabel: { display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' },
-  navbar: { backgroundColor: '#667eea', padding: '15px 30px', color: 'white', position: 'sticky', top: 0, zIndex: 1000 },
+  inputSmall: { width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' },
+  button: { width: '100%', padding: '12px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
+  error: { background: '#fee', color: '#c62828', padding: '10px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' },
+  demoInfo: { marginTop: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '10px', fontSize: '12px', maxHeight: '200px', overflowY: 'auto' },
+  navbar: { background: '#667eea', padding: '15px 30px', color: 'white' },
   navContent: { maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
   logo: { fontSize: '24px', margin: 0 },
-  navTabs: { display: 'flex', gap: '5px', background: 'rgba(255,255,255,0.2)', padding: '5px', borderRadius: '10px' },
-  navTab: { padding: '8px 16px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s' },
-  navLinks: { display: 'flex', alignItems: 'center', gap: '20px' },
-  userInfo: { fontSize: '14px', opacity: 0.9 },
-  logoutBtn: { padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  userInfo: { display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' },
+  logoutBtn: { padding: '8px 16px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
   content: { maxWidth: '1400px', margin: '0 auto', padding: '30px' },
-  ecoHero: { background: 'linear-gradient(135deg, #2e7d32, #4caf50)', borderRadius: '20px', padding: '30px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap' },
-  heroTitle: { fontSize: '28px', marginBottom: '10px' },
-  heroStats: { display: 'flex', gap: '40px', textAlign: 'center' },
-  statNumber: { fontSize: '32px', fontWeight: 'bold' },
+  welcomeCard: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '30px', borderRadius: '20px', marginBottom: '30px', textAlign: 'center' },
   sectionTitle: { fontSize: '24px', marginBottom: '20px', color: '#333' },
-  subsectionTitle: { fontSize: '20px', margin: '20px 0 15px', color: '#555' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' },
-  card: { background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-  cardDesc: { color: '#666', marginBottom: '15px', lineHeight: '1.5' },
-  cardInfo: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#888', marginBottom: '15px' },
-  rubricPreview: { display: 'flex', gap: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginBottom: '15px', fontSize: '12px' },
-  submittedBadge: { background: '#c8e6c9', color: '#2e7d32', padding: '5px 10px', borderRadius: '20px', fontSize: '12px' },
-  pendingBadge: { background: '#fff3e0', color: '#e65100', padding: '5px 10px', borderRadius: '20px', fontSize: '12px' },
-  scoreBox: { background: '#e8eaf6', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px', display: 'flex', justifyContent: 'space-between' },
-  submitForm: { marginTop: '15px' },
-  formActions: { display: 'flex', gap: '10px' },
-  actionBtn: { width: '100%', padding: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '10px' },
-  submitBtn: { flex: 1, padding: '10px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  cancelBtn: { flex: 1, padding: '10px', backgroundColor: '#999', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  evaluateBtn: { padding: '6px 12px', backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' },
-  createBtn: { padding: '12px 24px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '16px' },
-  formCard: { background: 'white', padding: '25px', borderRadius: '15px', marginBottom: '30px' },
-  publishBtn: { width: '100%', padding: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
-  evalBox: { marginTop: '15px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '10px' },
-  subBox: { marginTop: '10px', padding: '12px', backgroundColor: '#f0f4ff', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' },
-  courseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
-  courseCard: { background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-  doubtsList: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  doubtCard: { background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-  doubtForm: { background: 'white', padding: '20px', borderRadius: '15px', marginBottom: '30px' },
-  performanceTable: { background: 'white', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-  th: { padding: '12px', textAlign: 'left' },
-  td: { padding: '12px', borderBottom: '1px solid #eee' }
+  courseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
+  courseCard: { background: 'white', padding: '25px', borderRadius: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', cursor: 'pointer', textAlign: 'center' },
+  courseStats: { display: 'flex', justifyContent: 'space-between', margin: '15px 0', fontSize: '13px', color: '#666' },
+  viewBtn: { width: '100%', padding: '10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '10px' },
+  courseHeader: { background: 'white', padding: '25px', borderRadius: '15px', marginBottom: '20px', textAlign: 'center' },
+  choiceContainer: { display: 'flex', gap: '30px', justifyContent: 'center', flexWrap: 'wrap' },
+  choiceCardLarge: { background: 'white', padding: '40px', borderRadius: '20px', textAlign: 'center', cursor: 'pointer', width: '350px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' },
+  choiceContainerLarge: { display: 'flex', justifyContent: 'center', marginTop: '20px' },
+  assignmentsContainer: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  assignmentCard: { background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
+  assignmentHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' },
+  submittedBadge: { background: '#c8e6c9', color: '#2e7d32', padding: '5px 12px', borderRadius: '20px', fontSize: '12px' },
+  pendingBadge: { background: '#fff3e0', color: '#e65100', padding: '5px 12px', borderRadius: '20px', fontSize: '12px' },
+  assignmentDetails: { display: 'flex', gap: '20px', marginTop: '10px', fontSize: '13px', color: '#666', flexWrap: 'wrap' },
+  submitBtn: { marginTop: '10px', padding: '8px 16px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+  cancelBtn: { marginTop: '10px', padding: '8px 16px', background: '#999', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', marginLeft: '10px' },
+  formActions: { display: 'flex', gap: '10px', marginTop: '10px' },
+  syllabusContainer: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  unitCard: { background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
+  studentsTable: { background: 'white', borderRadius: '15px', overflow: 'auto', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%' },
+  emptyState: { textAlign: 'center', padding: '60px', background: 'white', borderRadius: '15px', color: '#666' },
+  formCard: { background: 'white', padding: '30px', borderRadius: '20px', maxWidth: '600px', margin: '0 auto' },
+  publishBtn: { width: '100%', padding: '12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
+  singleCourseCard: { background: 'white', padding: '30px', borderRadius: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '500px', margin: '0 auto' },
+  buttonGroup: { display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px', flexWrap: 'wrap' },
+  primaryBtn: { padding: '12px 24px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  secondaryBtn: { padding: '12px 24px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  infoBtn: { padding: '12px 24px', background: '#ff9800', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  tabContainer: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
+  tab: { padding: '10px 20px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }
 };
-
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
-document.head.appendChild(styleSheet);
 
 export default App;
